@@ -2,6 +2,7 @@ import flet as ft
 from style import *
 from database.base import *
 from database.create_base import *
+import threading
 
 def main(page: ft.Page):
     page.title = "Flet pages example"
@@ -9,12 +10,21 @@ def main(page: ft.Page):
     page.keyboard_events = True
     init_db()
 
-    selected_theme_id = None
-    word_list = ft.Column()
+    def speak_word(word):
+        def run():
+            import pyttsx3
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 150)
+            engine.say(word)
+            engine.runAndWait()
+            engine.stop()
+        threading.Thread(target=run, daemon=True).start()
 
+    selected_theme_id = None
+    word_list = ft.ListView(expand=True, spacing=10, padding=10)
     ASK_DELETE_THEME_CONFIRM = page.client_storage.get("ask_delete_confirm") or True
 
-    def chackbox_changed(e):
+    def checkbox_changed(e):
         nonlocal ASK_DELETE_THEME_CONFIRM
         ASK_DELETE_THEME_CONFIRM = e.control.value
         page.client_storage.set("ask_delete_confirm", ASK_DELETE_THEME_CONFIRM)
@@ -35,7 +45,7 @@ def main(page: ft.Page):
                     style=button_style_for_theme,
                     width=120,
                     height=50,
-                    on_click=lambda e: page.go(f"/theme/{theme.id}")
+                    on_click=lambda e, theme_id=theme.id: page.go(f"/theme/{theme_id}")
                 )
             )
             theme_bs.value = ""
@@ -75,7 +85,6 @@ def main(page: ft.Page):
         page.update()
 
     theme_bs = ft.TextField(on_submit=add_theme)
-
     bs_for_theme = ft.BottomSheet(
         content=ft.Container(
             content=ft.Column([
@@ -86,7 +95,6 @@ def main(page: ft.Page):
             padding=20,
         )
     )
-
     page.overlay.append(bs_for_theme)
 
     def add_word(e=None):
@@ -94,15 +102,42 @@ def main(page: ft.Page):
         translated = translated_bs.value.strip()
         if word and translated and selected_theme_id:
             create_word(word=word, translated=translated, id=selected_theme_id)
-            word_list.controls.append(ft.Text(f"{word} — {translated}", size=18))
+            new_row = create_word_row(word, translated)
+            word_list.controls.append(new_row)
             word_bs.value = ""
             translated_bs.value = ""
             close_bs_word()
             page.update()
 
+    def delete_word_handler(e, word_id, row_ctrl):
+        delete_word_by_id(word_id)
+        word_list.controls.remove(row_ctrl)
+        page.update()
+
     def close_bs_word(e=None):
         bs_for_word.open = False
         page.update()
+
+    def create_word_row(word, translated, word_id=None):
+        if word_id is None:
+            word_obj = Word.select().where(Word.word == word, Word.translated == translated).get()
+            word_id = word_obj.id
+        row_ctrl = ft.Row([
+            ft.Text(f"{word} — {translated}", size=18),
+            ft.IconButton(
+                icon=ft.Icons.VOLUME_UP,
+                icon_color=ft.Colors.BLUE_300,
+                tooltip="Speak",
+                on_click=lambda e, w=word: speak_word(w)
+            ),
+            ft.IconButton(
+                icon=ft.Icons.DELETE,
+                icon_color=ft.Colors.RED_300,
+                on_click=lambda e, word_id=word_id, row_ctrl=None: delete_word_handler(e, word_id, row_ctrl),
+            )
+        ])
+        row_ctrl.controls[2].on_click = lambda e, word_id=word_id, row_ctrl=row_ctrl: delete_word_handler(e, word_id, row_ctrl)
+        return row_ctrl
 
     def make_bottom_sheet_word():
         word_bs = ft.TextField(label="Word")
@@ -112,12 +147,7 @@ def main(page: ft.Page):
         translated_bs.on_submit = add_word
         bs_for_word = ft.BottomSheet(
             content=ft.Container(
-                content=ft.Column([
-                    ft.Text("Add Word"),
-                    word_bs,
-                    translated_bs,
-                    add_btn
-                ]),
+                content=ft.Column([ft.Text("Add Word"), word_bs, translated_bs, add_btn]),
                 padding=30
             )
         )
@@ -130,7 +160,6 @@ def main(page: ft.Page):
         bs_for_word.open = True
         page.update()
         word_bs.focus()
-        page.update()
 
     bs_for_word, word_bs, translated_bs = make_bottom_sheet_word()
     page.overlay.append(bs_for_word)
@@ -139,8 +168,8 @@ def main(page: ft.Page):
         expand=True,
         runs_count=3,
         max_extent=150,
-        spacing=10,
-        run_spacing=10,
+        spacing=20,
+        run_spacing=20,
     )
 
     def route_change(route):
@@ -158,7 +187,7 @@ def main(page: ft.Page):
                         width=120,
                         height=50,
                         on_click=lambda e, theme_id=theme.id: page.go(f"/theme/{theme_id}")
-                    ),
+                    )
                 )
 
             page.views.append(
@@ -177,6 +206,7 @@ def main(page: ft.Page):
                                 style=button_style_for_play,
                                 width=120,
                                 height=50,
+                                on_click=lambda e: page.go("/play")
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.SETTINGS,
@@ -198,9 +228,8 @@ def main(page: ft.Page):
 
             word_list.controls.clear()
             for word in words:
-                word_list.controls.append(
-                    ft.Text(f"{word.word} — {word.translated}", size=18)
-                )
+                row_ctrl = create_word_row(word.word, word.translated, word.id)
+                word_list.controls.append(row_ctrl)
 
             page.views.append(
                 ft.View(
@@ -235,13 +264,29 @@ def main(page: ft.Page):
                                               on_click=lambda e: page.go("/")),
                         ]),
                         ft.Checkbox(
-                                label="Ask before deleting theme",
-                                value=ASK_DELETE_THEME_CONFIRM,
-                                on_change=chackbox_changed,
-                            ),
+                            label="Ask before deleting theme",
+                            value=ASK_DELETE_THEME_CONFIRM,
+                            on_change=checkbox_changed,
+                        ),
                     ],
                 )
             )
+            
+        elif page.route == "/play":
+            page.views.append(
+                ft.View(
+                    route="/play",
+                    controls=[
+                        ft.Row([
+                            ft.Text("Play Mode", size=24, weight=ft.FontWeight.BOLD),
+                            ft.ElevatedButton("Back", style=button_style_for_back,
+                                              on_click=lambda e: page.go("/")),
+                        ]),
+                        
+                    ],
+                )
+            )
+            print(get_random_word_and_translated_by_theme_id(get_random_theme_id()))
 
         page.update()
 
@@ -256,7 +301,6 @@ def main(page: ft.Page):
                 open_bs_word()
 
     page.on_keyboard_event = on_keyboard
-
 
 if __name__ == "__main__":
     ft.app(main)
