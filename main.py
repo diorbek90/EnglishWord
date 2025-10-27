@@ -3,6 +3,8 @@ from style import *
 from database.base import *
 from database.create_base import *
 import threading
+import random
+import time
 
 def main(page: ft.Page):
     page.title = "Flet pages example"
@@ -172,6 +174,51 @@ def main(page: ft.Page):
         run_spacing=20,
     )
 
+    #  PLAY MODE CONTROLS  
+    current_word = ft.Text(size=28, style=beautiful_text_style)
+    result_text = ft.Text(size=20, color=ft.Colors.AMBER_300)
+    answer_buttons_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=20)
+
+    def load_new_question():
+        all_words = list(Word.select())
+        if len(all_words) < 4:
+            result_text.value = "Need at least 4 words to play!"
+            page.update()
+            return
+
+        word_obj = random.choice(all_words)
+        correct_translation = word_obj.translated
+
+        wrong_answers = [w.translated for w in all_words if w.translated != correct_translation]
+        options = random.sample(wrong_answers, 3) + [correct_translation]
+        random.shuffle(options)
+
+        current_word.value = word_obj.word
+        result_text.value = ""
+
+        def make_option_button(text):
+            return ft.ElevatedButton(
+                text=text,
+                width=200,
+                height=50,
+                style=button_style_for_play,
+                on_click=lambda e, t=text: check_answer(t, correct_translation)
+            )
+
+        answer_buttons_row.controls = [make_option_button(opt) for opt in options]
+        page.update()
+
+    def check_answer(selected, correct):
+        if selected == correct:
+            result_text.value = "✅ Correct!"
+        else:
+            result_text.value = f"❌ Wrong! Correct: {correct}"
+        page.update()
+        time.sleep(1.2)
+        load_new_question()
+
+    # ------------------- ROUTES -------------------
+
     def route_change(route):
         nonlocal selected_theme_id
         page.views.clear()
@@ -271,22 +318,26 @@ def main(page: ft.Page):
                     ],
                 )
             )
-            
+
         elif page.route == "/play":
+            load_new_question()
             page.views.append(
                 ft.View(
                     route="/play",
+                    vertical_alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Row([
-                            ft.Text("Play Mode", size=24, weight=ft.FontWeight.BOLD),
-                            ft.ElevatedButton("Back", style=button_style_for_back,
-                                              on_click=lambda e: page.go("/")),
-                        ]),
-                        
+                        current_word,
+                        ft.Container(height=20),
+                        answer_buttons_row,
+                        ft.Container(height=20),
+                        result_text,
+                        ft.Container(height=30),
+                        ft.ElevatedButton("Back", style=button_style_for_back,
+                                          on_click=lambda e: page.go("/")),
                     ],
                 )
             )
-            print(get_random_word_and_translated_by_theme_id(get_random_theme_id()))
 
         page.update()
 

@@ -41,3 +41,19 @@ button_style_for_back = ft.ButtonStyle(
     padding=ft.padding.symmetric(horizontal=24, vertical=14),
 )
 
+
+"""Text Styles"""
+beautiful_text_style = ft.TextStyle(
+    size=28,
+    weight=ft.FontWeight.BOLD,
+    color=ft.Colors.AMBER_300,
+    shadow=ft.BoxShadow(
+        blur_radius=6,
+        color=ft.Colors.AMBER_700,
+        offset=ft.Offset(2, 2),
+    ),
+    italic=True,
+    letter_spacing=1.5,
+)
+
+
