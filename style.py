@@ -41,6 +41,18 @@ button_style_for_back = ft.ButtonStyle(
     padding=ft.padding.symmetric(horizontal=24, vertical=14),
 )
 
+button_style_for_play_ai = ft.ButtonStyle(
+    bgcolor=ft.Colors.DEEP_PURPLE_600,
+    color=ft.Colors.WHITE,
+    overlay_color=ft.Colors.AMBER_200,
+    elevation=10,
+    shadow_color=ft.Colors.DEEP_PURPLE_900,
+    shape=ft.RoundedRectangleBorder(radius=24),
+    padding=ft.padding.symmetric(horizontal=32, vertical=18),
+)
+
+
+
 
 """Text Styles"""
 beautiful_text_style = ft.TextStyle(
