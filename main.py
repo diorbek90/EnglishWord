@@ -188,7 +188,8 @@ def main(page: ft.Page):
             return
 
         def run():
-            result = safe_generate(f'Translate the English word "{word}" into Russian. Give only one word.')
+            result = safe_generate(f'Detect the language of the text "{word}" (it can be one word or a short phrase) '
+            f'and translate it into Russian. Give only the translation without explanations.')
             if result:
                 translated_field.value = result
                 page.update()
@@ -297,13 +298,17 @@ def main(page: ft.Page):
                 avoid = ", ".join(used_ai_words) if used_ai_words else "none"
 
                 prompt = f"""
-Generate 1 English word on the theme: "{theme}".
+Detect the language of the theme "{theme}" (it can be Arabic or English).
+
+If the theme is in English — generate 1 English word related to the theme.
+If the theme is in Arabic — generate 1 Arabic word related to the theme.
+
 Do NOT repeat: {avoid}
 
-Return exactly:
-WORD: <eng> 
-CORRECT: <rus>
-WRONG: wrong1, wrong2, wrong3, and wrong words most be on russion. All words most be begin lower letter
+Return exactly in this format:
+WORD: <word in the detected language>
+CORRECT: <translation of that word into Russian>
+WRONG: wrong1, wrong2, wrong3 — all wrong words must be in Russian and start with a lowercase letter.
 """
 
                 result = safe_generate(prompt)
