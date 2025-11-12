@@ -401,10 +401,10 @@ WRONG: wrong1, wrong2, wrong3, and wrong words most be on russion. All words mos
                     route="/",
                     controls=[
                         ft.Row([
-                            ft.IconButton(icon=ft.Icons.ADD, icon_color=ft.Colors.GREEN_300, on_click=open_bs_theme),
-                            ft.ElevatedButton("Play", style=button_style_for_play, on_click=lambda e: page.go("/play")),
+                            ft.IconButton(icon=ft.Icons.ADD, icon_color=ft.Colors.GREEN_300, icon_size=40, on_click=open_bs_theme),
+                            ft.ElevatedButton("Play", style=button_style_for_play, width=120, height=40, on_click=lambda e: page.go("/play")),
                             ft.ElevatedButton("Play with AI", style=button_style_for_play_ai, on_click=lambda e: page.go("/playWithAI")),
-                            ft.IconButton(icon=ft.Icons.SETTINGS, icon_color=ft.Colors.BLUE_300, on_click=lambda e: page.go("/settings")),
+                            ft.IconButton(icon=ft.Icons.SETTINGS, icon_color=ft.Colors.BLUE_300,icon_size=40, on_click=lambda e: page.go("/settings")),
                         ]),
                         grid_for_theme
                     ]
